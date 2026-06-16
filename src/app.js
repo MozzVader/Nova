@@ -134,11 +134,11 @@ app.renderCurrentInstance = function () {
       break;
     case 'images':
       viewImages.classList.remove('hidden');
-      renderImages(viewImages, instance);
+      renderImages(viewImages, instance, app);
       break;
     case 'todo':
       viewTodo.classList.remove('hidden');
-      renderTodo(viewTodo, instance);
+      renderTodo(viewTodo, instance, app);
       break;
   }
 };

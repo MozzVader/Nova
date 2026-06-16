@@ -1,7 +1,7 @@
 import { updateInstance } from '../firebase/db.js';
 
 // ── Render Images View ──────────────────────────────────
-export function renderImages(container, instance) {
+export function renderImages(container, instance, app) {
   const { images = [] } = instance.data || {};
 
   container.innerHTML = `
@@ -24,7 +24,7 @@ export function renderImages(container, instance) {
     </div>
   `;
 
-  bindImagesEvents(container, instance);
+  bindImagesEvents(container, instance, app);
 }
 
 function renderImageItem(img) {
@@ -44,8 +44,13 @@ function renderImageItem(img) {
   `;
 }
 
-function bindImagesEvents(container, instance) {
+function bindImagesEvents(container, instance, app) {
   let titleTimeout = null;
+
+  // Helper: re-render after Firestore update
+  function refreshView() {
+    setTimeout(() => app.renderCurrentInstance(), 50);
+  }
 
   // Add image via URL
   container.querySelector('[data-action="add-image"]')?.addEventListener('submit', async (e) => {
@@ -63,6 +68,7 @@ function bindImagesEvents(container, instance) {
     try {
       await updateInstance(instance.id, { 'data.images': images });
       input.value = '';
+      refreshView();
     } catch (err) {
       console.error('Failed to add image:', err);
     }
@@ -75,13 +81,14 @@ function bindImagesEvents(container, instance) {
       const images = (instance.data.images || []).filter(i => i.id !== imgId);
       try {
         await updateInstance(instance.id, { 'data.images': images });
+        refreshView();
       } catch (err) {
         console.error('Failed to delete image:', err);
       }
     });
   });
 
-  // Title changes
+  // Title changes (no re-render needed, save silently)
   container.querySelectorAll('.masonry-item-title').forEach(input => {
     input.addEventListener('input', () => {
       clearTimeout(titleTimeout);

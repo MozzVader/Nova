@@ -8,7 +8,7 @@ const STATUS_LABELS = {
 };
 
 // ── Render Todo View ────────────────────────────────────
-export function renderTodo(container, instance) {
+export function renderTodo(container, instance, app) {
   const { view = 'kanban', tasks = [] } = instance.data || {};
 
   container.innerHTML = `
@@ -37,7 +37,7 @@ export function renderTodo(container, instance) {
     renderTable(viewContent, instance);
   }
 
-  bindTodoEvents(container, viewContent, instance);
+  bindTodoEvents(container, viewContent, instance, app);
 }
 
 // ── Kanban ──────────────────────────────────────────────
@@ -108,12 +108,18 @@ function renderTable(container, instance) {
 }
 
 // ── Events ──────────────────────────────────────────────
-function bindTodoEvents(container, viewContent, instance) {
+function bindTodoEvents(container, viewContent, instance, app) {
+  // Helper: re-render after Firestore update
+  function refreshView() {
+    setTimeout(() => app.renderCurrentInstance(), 50);
+  }
+
   // View toggle
   container.querySelectorAll('.todo-view-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const view = btn.dataset.view;
       await updateInstance(instance.id, { 'data.view': view });
+      refreshView();
     });
   });
 
@@ -133,6 +139,7 @@ function bindTodoEvents(container, viewContent, instance) {
     try {
       await updateInstance(instance.id, { 'data.tasks': tasks });
       input.value = '';
+      refreshView();
     } catch (err) {
       console.error('Failed to add task:', err);
     }
@@ -146,6 +153,7 @@ function bindTodoEvents(container, viewContent, instance) {
       const tasks = (instance.data.tasks || []).filter(t => t.id !== taskId);
       try {
         await updateInstance(instance.id, { 'data.tasks': tasks });
+        refreshView();
       } catch (err) {
         console.error('Failed to delete task:', err);
       }
@@ -162,6 +170,7 @@ function bindTodoEvents(container, viewContent, instance) {
       );
       try {
         await updateInstance(instance.id, { 'data.tasks': tasks });
+        refreshView();
       } catch (err) {
         console.error('Failed to update task:', err);
       }
