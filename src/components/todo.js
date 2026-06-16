@@ -58,7 +58,7 @@ function renderKanban(container, instance) {
     </div>
   `;
 
-  bindDragDrop(container, instance);
+  bindDragDrop(container, instance, app);
 }
 
 function renderKanbanCard(task) {
@@ -195,7 +195,7 @@ function bindTodoEvents(container, viewContent, instance, app) {
 }
 
 // ── Drag & Drop ─────────────────────────────────────────
-function bindDragDrop(container, instance) {
+function bindDragDrop(container, instance, app) {
   let draggedTaskId = null;
 
   container.querySelectorAll('.kanban-card').forEach(card => {
@@ -236,11 +236,7 @@ function bindDragDrop(container, instance) {
 
       try {
         await updateInstance(instance.id, { 'data.tasks': tasks });
-        // Visually move the card immediately
-        const card = container.querySelector(`[data-task-id="${draggedTaskId}"]`);
-        if (card && card.parentElement !== dropZone) {
-          dropZone.appendChild(card);
-        }
+        setTimeout(() => app.renderCurrentInstance(), 50);
       } catch (err) {
         console.error('Failed to move task:', err);
       }

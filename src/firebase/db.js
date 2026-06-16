@@ -72,7 +72,7 @@ function getDefaultData(category) {
   switch (category) {
     case 'notes':   return { cards: [] };
     case 'images':  return { images: [] };
-    case 'todo':    return { view: 'kanban', tasks: [] };
+    case 'todo':    return { view: 'table', tasks: [] };
     default:        return {};
   }
 }
