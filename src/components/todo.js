@@ -33,7 +33,7 @@ export function renderTodo(container, instance, app) {
 
   const viewContent = container.querySelector('#todo-view-content');
   if (view === 'kanban') {
-    renderKanban(viewContent, instance);
+    renderKanban(viewContent, instance, app);
   } else {
     renderTable(viewContent, instance);
   }
