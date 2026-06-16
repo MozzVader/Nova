@@ -1,5 +1,7 @@
-// Firebase configuration
-// Replace these values with your own Firebase project config
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getFirestore, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
 const firebaseConfig = {
   apiKey: "AIzaSyCTWw9olvBAcNo1CfbAbvX6KeIuHOGaRuE",
   authDomain: "nova-4b689.firebaseapp.com",
@@ -9,14 +11,11 @@ const firebaseConfig = {
   appId: "1:702429573137:web:7aa477ade020e1785d01b0"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 
-export const auth = firebase.auth();
-export const db = firebase.firestore();
-
-// Enable offline persistence
-db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+enableIndexedDbPersistence(db).catch((err) => {
   if (err.code === 'failed-precondition') {
     console.warn('Persistence failed: multiple tabs open');
   } else if (err.code === 'unimplemented') {

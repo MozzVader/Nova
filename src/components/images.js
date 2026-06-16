@@ -1,5 +1,4 @@
-import { db } from '../firebase/db.js';
-import { auth } from '../firebase/config.js';
+import { updateInstance } from '../firebase/db.js';
 
 // ── Render Images View ──────────────────────────────────
 export function renderImages(container, instance) {
@@ -62,10 +61,7 @@ function bindImagesEvents(container, instance) {
     }];
 
     try {
-      await db.collection('instances').doc(instance.id).update({
-        'data.images': images,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      await updateInstance(instance.id, { 'data.images': images });
       input.value = '';
     } catch (err) {
       console.error('Failed to add image:', err);
@@ -78,10 +74,7 @@ function bindImagesEvents(container, instance) {
       const imgId = btn.dataset.imgId;
       const images = (instance.data.images || []).filter(i => i.id !== imgId);
       try {
-        await db.collection('instances').doc(instance.id).update({
-          'data.images': images,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        await updateInstance(instance.id, { 'data.images': images });
       } catch (err) {
         console.error('Failed to delete image:', err);
       }
@@ -98,10 +91,7 @@ function bindImagesEvents(container, instance) {
           i.id === imgId ? { ...i, title: input.value } : i
         );
         try {
-          await db.collection('instances').doc(instance.id).update({
-            'data.images': images,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
+          await updateInstance(instance.id, { 'data.images': images });
         } catch (err) {
           console.error('Failed to update image title:', err);
         }

@@ -1,5 +1,4 @@
-import { db } from '../firebase/db.js';
-import { auth } from '../firebase/config.js';
+import { updateInstance } from '../firebase/db.js';
 
 const STATUSES = ['todo', 'in-progress', 'done'];
 const STATUS_LABELS = {
@@ -114,10 +113,7 @@ function bindTodoEvents(container, viewContent, instance) {
   container.querySelectorAll('.todo-view-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const view = btn.dataset.view;
-      await db.collection('instances').doc(instance.id).update({
-        'data.view': view,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      await updateInstance(instance.id, { 'data.view': view });
     });
   });
 
@@ -135,10 +131,7 @@ function bindTodoEvents(container, viewContent, instance) {
     }];
 
     try {
-      await db.collection('instances').doc(instance.id).update({
-        'data.tasks': tasks,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      await updateInstance(instance.id, { 'data.tasks': tasks });
       input.value = '';
     } catch (err) {
       console.error('Failed to add task:', err);
@@ -152,10 +145,7 @@ function bindTodoEvents(container, viewContent, instance) {
       const taskId = btn.dataset.taskId;
       const tasks = (instance.data.tasks || []).filter(t => t.id !== taskId);
       try {
-        await db.collection('instances').doc(instance.id).update({
-          'data.tasks': tasks,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        await updateInstance(instance.id, { 'data.tasks': tasks });
       } catch (err) {
         console.error('Failed to delete task:', err);
       }
@@ -171,10 +161,7 @@ function bindTodoEvents(container, viewContent, instance) {
         t.id === taskId ? { ...t, status: newStatus } : t
       );
       try {
-        await db.collection('instances').doc(instance.id).update({
-          'data.tasks': tasks,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        await updateInstance(instance.id, { 'data.tasks': tasks });
       } catch (err) {
         console.error('Failed to update task:', err);
       }
@@ -222,10 +209,7 @@ function bindDragDrop(container, instance) {
       );
 
       try {
-        await db.collection('instances').doc(instance.id).update({
-          'data.tasks': tasks,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        await updateInstance(instance.id, { 'data.tasks': tasks });
       } catch (err) {
         console.error('Failed to move task:', err);
       }

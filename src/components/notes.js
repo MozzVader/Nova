@@ -1,5 +1,4 @@
-import { db } from '../firebase/db.js';
-import { auth } from '../firebase/config.js';
+import { updateInstance } from '../firebase/db.js';
 
 // ── Render Notes View ────────────────────────────────────
 export function renderNotes(container, instance) {
@@ -121,10 +120,7 @@ function getCardsFromDOM(container) {
 async function saveNotes(container, instance) {
   const cards = getCardsFromDOM(container);
   try {
-    await db.collection('instances').doc(instance.id).update({
-      'data.cards': cards,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    await updateInstance(instance.id, { 'data.cards': cards });
   } catch (err) {
     console.error('Failed to save notes:', err);
   }

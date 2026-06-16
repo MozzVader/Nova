@@ -1,103 +1,95 @@
 import { auth, db } from './config.js';
+import {
+  collection, getDocs, getDoc, addDoc, doc, updateDoc, deleteDoc,
+  query, where, orderBy, onSnapshot, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import {
+  signInWithEmailAndPassword as authSignIn,
+  createUserWithEmailAndPassword as authSignUp,
+  signOut as authSignOut,
+  onAuthStateChanged as authOnState
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
 const COLLECTION = 'instances';
 
-// ── Helpers ──────────────────────────────────────────────
-function userPath() {
-  const uid = auth.currentUser?.uid;
-  if (!uid) throw new Error('User not authenticated');
-  return `${uid}_${COLLECTION}`;
-}
-
 // ── Instances CRUD ───────────────────────────────────────
 export async function getInstances(category) {
-  const snap = await db
-    .collection(COLLECTION)
-    .where('userId', '==', auth.currentUser.uid)
-    .where('category', '==', category)
-    .orderBy('updatedAt', 'desc')
-    .get();
-
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const q = query(
+    collection(db, COLLECTION),
+    where('userId', '==', auth.currentUser.uid),
+    where('category', '==', category),
+    orderBy('updatedAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 export async function createInstance(category, name) {
-  const now = firebase.firestore.FieldValue.serverTimestamp();
-  const docRef = await db.collection(COLLECTION).add({
+  const docRef = await addDoc(collection(db, COLLECTION), {
     userId: auth.currentUser.uid,
     category,
     name: name || getDefaultName(category),
     data: getDefaultData(category),
-    createdAt: now,
-    updatedAt: now
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
   });
-  const doc = await docRef.get();
-  return { id: doc.id, ...doc.data() };
+  const snap = await getDoc(doc(db, COLLECTION, docRef.id));
+  return { id: snap.id, ...snap.data() };
 }
 
 export async function updateInstance(id, updates) {
-  await db.collection(COLLECTION).doc(id).update({
+  await updateDoc(doc(db, COLLECTION, id), {
     ...updates,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    updatedAt: serverTimestamp()
   });
 }
 
 export async function deleteInstance(id) {
-  await db.collection(COLLECTION).doc(id).delete();
+  await deleteDoc(doc(db, COLLECTION, id));
 }
 
 // ── Realtime listener ───────────────────────────────────
 export function onInstancesChange(category, callback) {
-  return db
-    .collection(COLLECTION)
-    .where('userId', '==', auth.currentUser.uid)
-    .where('category', '==', category)
-    .orderBy('updatedAt', 'desc')
-    .onSnapshot((snap) => {
-      const instances = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      callback(instances);
-    });
+  const q = query(
+    collection(db, COLLECTION),
+    where('userId', '==', auth.currentUser.uid),
+    where('category', '==', category),
+    orderBy('updatedAt', 'desc')
+  );
+  return onSnapshot(q, (snap) => {
+    const instances = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    callback(instances);
+  });
 }
 
 // ── Defaults ─────────────────────────────────────────────
 function getDefaultName(category) {
-  const names = {
-    notes: 'Nueva nota',
-    images: 'Nueva galería',
-    todo: 'Nueva lista'
-  };
+  const names = { notes: 'Nueva nota', images: 'Nueva galería', todo: 'Nueva lista' };
   return names[category] || 'Nueva instancia';
 }
 
 function getDefaultData(category) {
   switch (category) {
-    case 'notes':
-      return { cards: [] }; // { id, title, content (HTML) }
-    case 'images':
-      return { images: [] }; // { id, url, title }
-    case 'todo':
-      return {
-        view: 'kanban', // 'kanban' | 'table'
-        tasks: [] // { id, text, status: 'todo'|'in-progress'|'done' }
-      };
-    default:
-      return {};
+    case 'notes':   return { cards: [] };
+    case 'images':  return { images: [] };
+    case 'todo':    return { view: 'kanban', tasks: [] };
+    default:        return {};
   }
 }
 
 // ── Auth helpers ─────────────────────────────────────────
-export async function signIn(email, password) {
-  return auth.signInWithEmailAndPassword(email, password);
+export function signIn(email, password) {
+  return authSignIn(auth, email, password);
 }
 
-export async function signUp(email, password) {
-  return auth.createUserWithEmailAndPassword(email, password);
+export function signUp(email, password) {
+  return authSignUp(auth, email, password);
 }
 
-export async function signOut() {
-  return auth.signOut();
+export function signOut() {
+  return authSignOut(auth);
 }
 
 export function onAuthChange(callback) {
-  return auth.onAuthStateChanged(callback);
+  return authOnState(auth, callback);
 }
