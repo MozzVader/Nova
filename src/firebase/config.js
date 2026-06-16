@@ -1,12 +1,12 @@
 // Firebase configuration
 // Replace these values with your own Firebase project config
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCTWw9olvBAcNo1CfbAbvX6KeIuHOGaRuE",
+  authDomain: "nova-4b689.firebaseapp.com",
+  projectId: "nova-4b689",
+  storageBucket: "nova-4b689.firebasestorage.app",
+  messagingSenderId: "702429573137",
+  appId: "1:702429573137:web:7aa477ade020e1785d01b0"
 };
 
 // Initialize Firebase
