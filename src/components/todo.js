@@ -157,16 +157,18 @@ function bindTodoEvents(container, viewContent, instance, app) {
       const el = row || card;
       if (el) el.style.display = 'none';
 
-      const tasks = (instance.data.tasks || []).filter(t => t.id !== taskId);
-      const removedTask = instance.data.tasks.find(t => t.id === taskId);
+      let deleteScheduled = true;
 
       showToast('Tarea eliminada', () => {
-        // UNDO: restore in DOM
+        // UNDO: restore in DOM & cancel deletion
         if (el) el.style.display = '';
+        deleteScheduled = false;
       });
 
       // Schedule actual delete
       setTimeout(async () => {
+        if (!deleteScheduled) return;
+        const tasks = (instance.data.tasks || []).filter(t => t.id !== taskId);
         try {
           await updateInstance(instance.id, { 'data.tasks': tasks });
         } catch (err) {

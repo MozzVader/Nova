@@ -95,17 +95,17 @@ function bindImagesEvents(container, instance, app) {
       const originalDisplay = imgItem.style.display;
       imgItem.style.display = 'none';
 
-      // Save backup for undo
-      const originalImages = [...(instance.data.images || [])];
-      const removedImage = originalImages.find(i => i.id === imgId);
+      let deleteScheduled = true;
 
-      showToast('Imagen eliminada', async () => {
-        // UNDO: restore in DOM
+      showToast('Imagen eliminada', () => {
+        // UNDO: restore in DOM & cancel deletion
         imgItem.style.display = originalDisplay;
+        deleteScheduled = false;
       });
 
       // Schedule actual delete after 15s
       setTimeout(async () => {
+        if (!deleteScheduled) return;
         const images = (instance.data.images || []).filter(i => i.id !== imgId);
         try {
           await updateInstance(instance.id, { 'data.images': images });
