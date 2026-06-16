@@ -12,6 +12,11 @@ import {
 
 const COLLECTION = 'instances';
 
+// ── Sync indicator ──────────────────────────────────────
+const _syncListeners = [];
+export function onSyncWrite(fn) { _syncListeners.push(fn); }
+function _notifySync() { _syncListeners.forEach(fn => fn()); }
+
 // ── Instances CRUD ───────────────────────────────────────
 export async function getInstances(category) {
   const q = query(
@@ -34,6 +39,7 @@ export async function createInstance(category, name) {
     updatedAt: serverTimestamp()
   });
   const snap = await getDoc(doc(db, COLLECTION, docRef.id));
+  _notifySync();
   return { id: snap.id, ...snap.data() };
 }
 
@@ -42,10 +48,12 @@ export async function updateInstance(id, updates) {
     ...updates,
     updatedAt: serverTimestamp()
   });
+  _notifySync();
 }
 
 export async function deleteInstance(id) {
   await deleteDoc(doc(db, COLLECTION, id));
+  _notifySync();
 }
 
 // ── Realtime listener ───────────────────────────────────

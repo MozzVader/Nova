@@ -1,4 +1,4 @@
-import { onAuthChange, signIn, onInstancesChange } from './firebase/db.js';
+import { onAuthChange, signIn, onInstancesChange, onSyncWrite } from './firebase/db.js';
 import { initSidebar } from './components/sidebar.js';
 import { renderNotes } from './components/notes.js';
 import { renderImages } from './components/images.js';
@@ -162,6 +162,32 @@ window.addEventListener('hashchange', () => {
   }
   if (instanceId && instanceId !== app.currentInstanceId) {
     app.selectInstance(instanceId);
+  }
+});
+
+// ── Sync Dot ───────────────────────────────────────────
+const syncDot = document.getElementById('sync-dot');
+let syncTimeout = null;
+
+onSyncWrite(() => {
+  syncDot.classList.add('active');
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => syncDot.classList.remove('active'), 2000);
+});
+
+// ── FAB Toggle ─────────────────────────────────────────
+const fabToggle = document.getElementById('fab-toggle');
+const fabMenu = document.getElementById('fab-menu');
+
+fabToggle.addEventListener('click', () => {
+  fabMenu.classList.toggle('open');
+  fabToggle.classList.toggle('active');
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.fab-container')) {
+    fabMenu.classList.remove('open');
+    fabToggle.classList.remove('active');
   }
 });
 
