@@ -200,6 +200,13 @@ body.light ::-webkit-scrollbar-thumb {
   text-align: center;
 }
 
+.auth-logo-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+}
+
 .auth-logo {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 2.2rem;
@@ -353,6 +360,19 @@ body.light ::-webkit-scrollbar-thumb {
   align-items: center;
   justify-content: space-between;
   padding: 20px 20px 16px;
+}
+
+.sidebar-logo-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .sidebar-logo {

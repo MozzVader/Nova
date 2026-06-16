@@ -1,4 +1,4 @@
-import { onAuthChange, signIn, signUp, onInstancesChange } from './firebase/db.js';
+import { onAuthChange, signIn, onInstancesChange } from './firebase/db.js';
 import { initSidebar } from './components/sidebar.js';
 import { renderNotes } from './components/notes.js';
 import { renderImages } from './components/images.js';
@@ -25,17 +25,6 @@ const viewImages = document.getElementById('view-images');
 const viewTodo = document.getElementById('view-todo');
 
 // ── Auth ────────────────────────────────────────────────
-let isSignUp = false;
-
-document.querySelector('.auth-toggle-text').addEventListener('click', (e) => {
-  if (e.target.id !== 'auth-toggle') return;
-  e.preventDefault();
-  isSignUp = !isSignUp;
-  authSubmit.textContent = isSignUp ? 'Registrarse' : 'Iniciar sesión';
-  const text = isSignUp ? 'Ya tenés cuenta? ' : 'No tenés cuenta? ';
-  const linkText = isSignUp ? 'Iniciá sesión' : 'Registrate';
-  e.target.closest('.auth-toggle-text').innerHTML = `${text}<a href="#" id="auth-toggle">${linkText}</a>`;
-});
 
 authForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -43,11 +32,7 @@ authForm.addEventListener('submit', async (e) => {
   const password = document.getElementById('auth-password').value;
 
   try {
-    if (isSignUp) {
-      await signUp(email, password);
-    } else {
-      await signIn(email, password);
-    }
+    await signIn(email, password);
   } catch (err) {
     alert(err.message);
   }

@@ -25,6 +25,7 @@
   <!-- Auth Screen -->
   <div id="auth-screen" class="auth-screen hidden">
     <div class="auth-card">
+      <img src="assets/icon-512.png" alt="N&#x014D;va" class="auth-logo-img" />
       <div class="auth-logo">N&#x014D;va</div>
       <p class="auth-subtitle">Tu workspace m&iacute;nimo</p>
       <form id="auth-form" class="auth-form">
@@ -32,9 +33,7 @@
         <input type="password" id="auth-password" placeholder="Contrase&ntilde;a" required autocomplete="current-password" />
         <button type="submit" id="auth-submit" class="btn btn-primary">Iniciar sesi&oacute;n</button>
       </form>
-      <p class="auth-toggle-text">
-        No ten&eacute;s cuenta? <a href="#" id="auth-toggle">Registrate</a>
-      </p>
+
     </div>
   </div>
 
@@ -44,7 +43,10 @@
     <aside id="sidebar" class="sidebar">
       <!-- Logo -->
       <div class="sidebar-header">
-        <span class="sidebar-logo">N&#x014D;va</span>
+        <div class="sidebar-brand">
+          <img src="assets/favicon.png" alt="" class="sidebar-logo-img" />
+          <span class="sidebar-logo">N&#x014D;va</span>
+        </div>
         <button id="theme-toggle" class="theme-toggle" title="Cambiar tema">
           <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
