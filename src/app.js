@@ -180,23 +180,3 @@ window.addEventListener('hashchange', () => {
   }
 });
 
-// ── Live update: re-render when sidebar listener updates instances ──
-// The sidebar's onInstancesChange callback updates app.instances.
-// We hook into that by patching the sidebar init to also call renderCurrentInstance.
-const _origInitSidebar = initSidebar;
-// (Already handled: sidebar.onInstancesChange updates app.instances, 
-//  and we can add a MutationObserver or just re-render on interval.
-//  Simpler: patch the instances setter to auto-re-render if an instance is active.)
-
-// Proxy approach: wrap app.instances updates
-let _instances = [];
-Object.defineProperty(app, 'instances', {
-  get() { return _instances; },
-  set(newVal) {
-    _instances = newVal;
-    // Auto re-render if we have an active instance
-    if (this.currentInstanceId && this.user) {
-      this.renderCurrentInstance();
-    }
-  }
-});

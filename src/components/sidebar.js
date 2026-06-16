@@ -90,43 +90,78 @@ export function initSidebar(app) {
 function renderInstanceList(container, instances, app) {
   container.innerHTML = instances.map(inst => `
     <div class="instance-item ${inst.id === app.currentInstanceId ? 'active' : ''}" data-id="${inst.id}">
-      <input class="instance-name" value="${escapeHtml(inst.name)}" data-id="${inst.id}" />
-      <button class="btn-icon btn-danger btn-delete-instance" data-action="delete-instance" data-id="${inst.id}" title="Eliminar">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
+      <span class="instance-name-label" data-id="${inst.id}">${escapeHtml(inst.name)}</span>
+      <input class="instance-name-input hidden" value="${escapeHtml(inst.name)}" data-id="${inst.id}" />
+      <div class="instance-actions">
+        <button class="btn-icon btn-edit-instance" data-action="edit-instance" data-id="${inst.id}" title="Renombrar">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon btn-danger btn-delete-instance" data-action="delete-instance" data-id="${inst.id}" title="Eliminar">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
     </div>
   `).join('');
 
-  // Click to select
+  // Click instance item → select
   container.querySelectorAll('.instance-item').forEach(el => {
     el.addEventListener('click', (e) => {
-      // Don't trigger if clicking name (focus) or delete button
-      if (e.target.classList.contains('instance-name') || e.target.closest('.btn-delete-instance')) return;
+      if (e.target.closest('.instance-actions')) return;
       app.selectInstance(el.dataset.id);
     });
   });
 
-  // Rename on blur/enter
-  container.querySelectorAll('.instance-name').forEach(input => {
-    input.addEventListener('blur', async () => {
+  // Edit (pencil icon) → show input, hide label
+  container.querySelectorAll('[data-action="edit-instance"]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const item = btn.closest('.instance-item');
+      const label = item.querySelector('.instance-name-label');
+      const input = item.querySelector('.instance-name-input');
+      label.classList.add('hidden');
+      input.classList.remove('hidden');
+      input.focus();
+      input.select();
+    });
+  });
+
+  // Rename: confirm on blur or enter
+  container.querySelectorAll('.instance-name-input').forEach(input => {
+    async function commitRename() {
       const id = input.dataset.id;
       const newName = input.value.trim();
       const instance = app.instances.find(i => i.id === id);
+      const item = input.closest('.instance-item');
+      const label = item.querySelector('.instance-name-label');
+
       if (instance && newName && newName !== instance.name) {
+        // Optimistic: update label immediately
+        label.textContent = newName;
         try {
           await updateInstance(id, { name: newName });
         } catch (err) {
           console.error('Failed to rename:', err);
-          input.value = instance.name;
+          label.textContent = instance.name;
         }
       } else if (!newName) {
-        input.value = instance.name;
+        // Revert if empty
+        label.textContent = instance.name;
       }
-    });
 
+      input.classList.add('hidden');
+      label.classList.remove('hidden');
+    }
+
+    input.addEventListener('blur', commitRename);
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
+        input.blur();
+      }
+      if (e.key === 'Escape') {
+        // Revert without saving
+        const instance = app.instances.find(i => i.id === input.dataset.id);
+        input.value = instance.name;
         input.blur();
       }
     });
