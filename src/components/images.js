@@ -1,4 +1,5 @@
 import { updateInstance } from '../firebase/db.js';
+import { showToast, showLightbox } from './toast.js';
 
 // ── Render Images View ──────────────────────────────────
 export function renderImages(container, instance, app) {
@@ -47,7 +48,6 @@ function renderImageItem(img) {
 function bindImagesEvents(container, instance, app) {
   let titleTimeout = null;
 
-  // Helper: re-render after Firestore update
   function refreshView() {
     setTimeout(() => app.renderCurrentInstance(), 50);
   }
@@ -74,17 +74,45 @@ function bindImagesEvents(container, instance, app) {
     }
   });
 
-  // Delete image
+  // Click image → lightbox
+  container.querySelectorAll('.masonry-item img').forEach(img => {
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', () => {
+      const item = img.closest('.masonry-item');
+      const titleInput = item.querySelector('.masonry-item-title');
+      showLightbox(img.src, titleInput ? titleInput.value : '');
+    });
+  });
+
+  // Delete image → toast undo
   container.querySelectorAll('[data-action="delete-image"]').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const imgId = btn.dataset.imgId;
-      const images = (instance.data.images || []).filter(i => i.id !== imgId);
-      try {
-        await updateInstance(instance.id, { 'data.images': images });
-        refreshView();
-      } catch (err) {
-        console.error('Failed to delete image:', err);
-      }
+      const imgItem = btn.closest('.masonry-item');
+
+      // Optimistic: hide from DOM immediately
+      const originalDisplay = imgItem.style.display;
+      imgItem.style.display = 'none';
+
+      // Save backup for undo
+      const originalImages = [...(instance.data.images || [])];
+      const removedImage = originalImages.find(i => i.id === imgId);
+
+      showToast('Imagen eliminada', async () => {
+        // UNDO: restore in DOM
+        imgItem.style.display = originalDisplay;
+      });
+
+      // Schedule actual delete after 15s
+      setTimeout(async () => {
+        const images = (instance.data.images || []).filter(i => i.id !== imgId);
+        try {
+          await updateInstance(instance.id, { 'data.images': images });
+        } catch (err) {
+          console.error('Failed to delete image:', err);
+        }
+      }, 15000);
     });
   });
 

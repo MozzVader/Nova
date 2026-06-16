@@ -1,4 +1,5 @@
 import { updateInstance } from '../firebase/db.js';
+import { showToast } from './toast.js';
 
 const STATUSES = ['todo', 'in-progress', 'done'];
 const STATUS_LABELS = {
@@ -109,7 +110,6 @@ function renderTable(container, instance) {
 
 // ── Events ──────────────────────────────────────────────
 function bindTodoEvents(container, viewContent, instance, app) {
-  // Helper: re-render after Firestore update
   function refreshView() {
     setTimeout(() => app.renderCurrentInstance(), 50);
   }
@@ -145,18 +145,34 @@ function bindTodoEvents(container, viewContent, instance, app) {
     }
   });
 
-  // Delete task
+  // Delete task → toast undo
   container.querySelectorAll('[data-action="delete-task"]').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const taskId = btn.dataset.taskId;
+
+      // Find the DOM element to hide
+      const row = btn.closest('tr[data-task-id]');
+      const card = btn.closest('.kanban-card');
+      const el = row || card;
+      if (el) el.style.display = 'none';
+
       const tasks = (instance.data.tasks || []).filter(t => t.id !== taskId);
-      try {
-        await updateInstance(instance.id, { 'data.tasks': tasks });
-        refreshView();
-      } catch (err) {
-        console.error('Failed to delete task:', err);
-      }
+      const removedTask = instance.data.tasks.find(t => t.id === taskId);
+
+      showToast('Tarea eliminada', () => {
+        // UNDO: restore in DOM
+        if (el) el.style.display = '';
+      });
+
+      // Schedule actual delete
+      setTimeout(async () => {
+        try {
+          await updateInstance(instance.id, { 'data.tasks': tasks });
+        } catch (err) {
+          console.error('Failed to delete task:', err);
+        }
+      }, 15000);
     });
   });
 
@@ -209,7 +225,8 @@ function bindDragDrop(container, instance) {
 
     dropZone.addEventListener('drop', async (e) => {
       e.preventDefault();
-      dropZone.closest('.kanban-column').classList.remove('drag-over');
+      const column = dropZone.closest('.kanban-column');
+      column.classList.remove('drag-over');
       if (!draggedTaskId) return;
 
       const newStatus = dropZone.dataset.status;
@@ -219,6 +236,11 @@ function bindDragDrop(container, instance) {
 
       try {
         await updateInstance(instance.id, { 'data.tasks': tasks });
+        // Visually move the card immediately
+        const card = container.querySelector(`[data-task-id="${draggedTaskId}"]`);
+        if (card && card.parentElement !== dropZone) {
+          dropZone.appendChild(card);
+        }
       } catch (err) {
         console.error('Failed to move task:', err);
       }

@@ -130,7 +130,7 @@ app.renderCurrentInstance = function () {
   switch (instance.category) {
     case 'notes':
       viewNotes.classList.remove('hidden');
-      renderNotes(viewNotes, instance);
+      renderNotes(viewNotes, instance, app);
       break;
     case 'images':
       viewImages.classList.remove('hidden');

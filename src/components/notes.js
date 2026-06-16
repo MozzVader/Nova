@@ -1,7 +1,8 @@
 import { updateInstance } from '../firebase/db.js';
+import { showToast } from './toast.js';
 
 // ── Render Notes View ────────────────────────────────────
-export function renderNotes(container, instance) {
+export function renderNotes(container, instance, app) {
   const { cards = [] } = instance.data || {};
 
   container.innerHTML = `
@@ -18,7 +19,7 @@ export function renderNotes(container, instance) {
     </div>
   `;
 
-  bindNotesEvents(container, instance);
+  bindNotesEvents(container, instance, app);
 }
 
 function renderCard(card) {
@@ -42,7 +43,7 @@ function renderCard(card) {
   `;
 }
 
-function bindNotesEvents(container, instance) {
+function bindNotesEvents(container, instance, app) {
   let saveTimeout = null;
 
   function scheduleSave() {
@@ -53,7 +54,6 @@ function bindNotesEvents(container, instance) {
   // Card title changes
   container.querySelectorAll('.notes-card-title').forEach(input => {
     input.addEventListener('input', () => scheduleSave());
-    // Prevent clicking the input from bubbling to instance-item rename
     input.addEventListener('click', e => e.stopPropagation());
   });
 
@@ -73,7 +73,6 @@ function bindNotesEvents(container, instance) {
       e.preventDefault();
       const cmd = btn.dataset.cmd;
       document.execCommand(cmd, false, null);
-      // Keep focus in the editor
       const card = btn.closest('.notes-card');
       card.querySelector('.notes-card-editor').focus();
       scheduleSave();
@@ -90,17 +89,43 @@ function bindNotesEvents(container, instance) {
       content: ''
     };
     cards.push(newCard);
-    renderNotes(container, { ...instance, data: { ...instance.data, cards } });
+    saveNotes(container, { ...instance, data: { ...instance.data, cards } });
+    app.renderCurrentInstance();
   });
 
-  // Delete card
+  // Delete card → toast undo
   container.querySelectorAll('[data-action="delete-card"]').forEach(btn => {
     btn.addEventListener('click', () => {
       const cardId = btn.dataset.cardId;
-      let cards = getCardsFromDOM(container);
-      cards = cards.filter(c => c.id !== cardId);
-      renderNotes(container, { ...instance, data: { ...instance.data, cards } });
-      saveNotes(container, { ...instance, data: { ...instance.data, cards } });
+      const cardEl = btn.closest('.notes-card');
+
+      // Optimistic: hide card from DOM
+      cardEl.style.display = 'none';
+
+      // Save current state without this card
+      const cards = getCardsFromDOM(container).filter(c => c.id !== cardId);
+
+      showToast('Nota eliminada', () => {
+        // UNDO: show card again, save with it
+        cardEl.style.display = '';
+        const allCards = getCardsFromDOM(container);
+        // Card was filtered out, re-add it
+        const removedCard = instance.data.cards.find(c => c.id === cardId);
+        if (removedCard) {
+          allCards.push(removedCard);
+          saveNotes(container, { ...instance, data: { ...instance.data, cards: allCards } });
+        }
+      });
+
+      // Schedule actual delete after 15s
+      setTimeout(() => {
+        // Re-read DOM (may have been restored by undo)
+        const currentCards = getCardsFromDOM(container);
+        if (!currentCards.find(c => c.id === cardId)) {
+          // Card is still gone, confirm deletion
+          saveNotes(container, { ...instance, data: { ...instance.data, cards } });
+        }
+      }, 15000);
     });
   });
 }
@@ -108,6 +133,7 @@ function bindNotesEvents(container, instance) {
 function getCardsFromDOM(container) {
   const cards = [];
   container.querySelectorAll('.notes-card').forEach(cardEl => {
+    if (cardEl.style.display === 'none') return;
     cards.push({
       id: cardEl.dataset.cardId,
       title: cardEl.querySelector('.notes-card-title').value,
@@ -118,9 +144,17 @@ function getCardsFromDOM(container) {
 }
 
 async function saveNotes(container, instance) {
-  const cards = getCardsFromDOM(container);
+  // Get all cards including hidden ones by temporarily showing them
+  const allCards = [];
+  container.querySelectorAll('.notes-card').forEach(cardEl => {
+    allCards.push({
+      id: cardEl.dataset.cardId,
+      title: cardEl.querySelector('.notes-card-title').value,
+      content: cardEl.querySelector('.notes-card-editor').innerHTML
+    });
+  });
   try {
-    await updateInstance(instance.id, { 'data.cards': cards });
+    await updateInstance(instance.id, { 'data.cards': allCards });
   } catch (err) {
     console.error('Failed to save notes:', err);
   }
