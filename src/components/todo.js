@@ -42,7 +42,7 @@ export function renderTodo(container, instance, app) {
 }
 
 // ── Kanban ──────────────────────────────────────────────
-function renderKanban(container, instance) {
+function renderKanban(container, instance, app) {
   const { tasks = [] } = instance.data || {};
 
   container.innerHTML = `
