@@ -671,6 +671,7 @@ body.light .icon-sun { display: none; }
 .notes-card {
   flex: 1;
   min-width: 0;
+  max-height: calc(100vh - 220px);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -719,7 +720,7 @@ body.light .icon-sun { display: none; }
   line-height: 1.7;
   color: var(--text-body);
   overflow-y: auto;
-  min-height: 200px;
+  min-height: 0;
 }
 
 .notes-card-editor:empty::before {
