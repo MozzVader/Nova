@@ -33,11 +33,40 @@ function renderCard(card) {
       </div>
       <div class="notes-card-editor" contenteditable="true" data-field="content" data-placeholder="Escribí algo...">${card.content || ''}</div>
       <div class="notes-toolbar">
-        <button data-cmd="bold" title="Negrita"><b>B</b></button>
-        <button data-cmd="italic" title="Itálica"><i>I</i></button>
-        <button data-cmd="insertUnorderedList" title="Lista">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        </button>
+        <div class="notes-toolbar-group">
+          <button data-cmd="bold" title="Negrita"><b>B</b></button>
+          <button data-cmd="italic" title="Itálica"><i>I</i></button>
+          <button data-cmd="underline" title="Subrayado"><u>U</u></button>
+        </div>
+        <div class="notes-toolbar-sep"></div>
+        <div class="notes-toolbar-group">
+          <button data-cmd="h1" title="Título 1" class="notes-toolbar-text">H1</button>
+          <button data-cmd="h2" title="Título 2" class="notes-toolbar-text">H2</button>
+        </div>
+        <div class="notes-toolbar-sep"></div>
+        <div class="notes-toolbar-group">
+          <button data-cmd="insertUnorderedList" title="Lista">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+          <button data-cmd="insertOrderedList" title="Lista numerada">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>
+          </button>
+          <button data-cmd="checkbox" title="Checkbox">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2" ry="2"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+          </button>
+        </div>
+        <div class="notes-toolbar-sep"></div>
+        <div class="notes-toolbar-group">
+          <button data-cmd="justifyLeft" title="Alinear izquierda">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+          </button>
+          <button data-cmd="justifyCenter" title="Centrar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+          </button>
+          <button data-cmd="justifyRight" title="Alinear derecha">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -69,15 +98,54 @@ function bindNotesEvents(container, instance, app) {
 
   // Toolbar commands
   container.querySelectorAll('.notes-toolbar button').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // prevent editor blur
       const cmd = btn.dataset.cmd;
-      document.execCommand(cmd, false, null);
+
+      if (cmd === 'h1' || cmd === 'h2') {
+        const tag = cmd.toUpperCase();
+        // Toggle: if already this heading, revert to paragraph
+        const current = document.queryCommandValue('formatBlock');
+        if (current.toLowerCase() === tag) {
+          document.execCommand('formatBlock', false, 'P');
+        } else {
+          document.execCommand('formatBlock', false, tag);
+        }
+      } else if (cmd === 'checkbox') {
+        insertCheckbox();
+      } else {
+        document.execCommand(cmd, false, null);
+      }
+
       const card = btn.closest('.notes-card');
       card.querySelector('.notes-card-editor').focus();
       scheduleSave();
     });
   });
+
+  function insertCheckbox() {
+    const editor = document.activeElement;
+    if (!editor || !editor.classList.contains('notes-card-editor')) return;
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.contentEditable = 'false';
+    checkbox.className = 'notes-checkbox';
+    const text = document.createTextNode('\u00a0');
+    const wrapper = document.createElement('label');
+    wrapper.className = 'notes-checkbox-label';
+    wrapper.contentEditable = 'false';
+    wrapper.appendChild(checkbox);
+    wrapper.appendChild(text);
+    const selection = window.getSelection();
+    if (selection.rangeCount) {
+      const range = selection.getRangeAt(0);
+      range.insertNode(wrapper);
+      range.setStartAfter(text);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }
 
   // Add card
   container.querySelector('[data-action="add-card"]')?.addEventListener('click', () => {
