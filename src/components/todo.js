@@ -8,9 +8,55 @@ const STATUS_LABELS = {
   'done': 'Done'
 };
 
+const PRIORITIES = ['none', 'low', 'medium', 'high'];
+const PRIORITY_LABELS = {
+  'none': '—',
+  'low': 'Baja',
+  'medium': 'Media',
+  'high': 'Alta'
+};
+
+function normalizeTask(t) {
+  return {
+    id: t.id,
+    text: t.text || '',
+    status: t.status || 'todo',
+    priority: t.priority || 'none',
+    dueDate: t.dueDate || null
+  };
+}
+
+function isOverdue(task) {
+  if (!task.dueDate || task.status === 'done') return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(task.dueDate + 'T23:59:59') < today;
+}
+
+function isDueToday(task) {
+  if (!task.dueDate) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return task.dueDate === today;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+function getProgress(tasks) {
+  const done = tasks.filter(t => t.status === 'done').length;
+  const total = tasks.length;
+  return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+}
+
 // ── Render Todo View ────────────────────────────────────
 export function renderTodo(container, instance, app) {
   const { view = 'kanban', tasks = [] } = instance.data || {};
+  const normalized = tasks.map(normalizeTask);
+  const progress = getProgress(normalized);
 
   container.innerHTML = `
     <div class="todo-container">
@@ -23,6 +69,15 @@ export function renderTodo(container, instance, app) {
           </div>
         </div>
       </div>
+
+      ${normalized.length > 0 ? `
+      <div class="todo-progress">
+        <div class="todo-progress-bar">
+          <div class="todo-progress-fill" style="width:${progress.pct}%"></div>
+        </div>
+        <span class="todo-progress-text">${progress.done} de ${progress.total} completadas</span>
+      </div>` : ''}
+
       <form class="todo-add-form" data-action="add-task">
         <input type="text" placeholder="Agregar tarea..." required />
         <button type="submit" class="btn btn-primary btn-sm">Agregar</button>
@@ -33,18 +88,16 @@ export function renderTodo(container, instance, app) {
 
   const viewContent = container.querySelector('#todo-view-content');
   if (view === 'kanban') {
-    renderKanban(viewContent, instance, app);
+    renderKanban(viewContent, normalized);
   } else {
-    renderTable(viewContent, instance);
+    renderTable(viewContent, normalized);
   }
 
-  bindTodoEvents(container, viewContent, instance, app);
+  bindTodoEvents(container, viewContent, normalized, instance, app);
 }
 
 // ── Kanban ──────────────────────────────────────────────
-function renderKanban(container, instance, app) {
-  const { tasks = [] } = instance.data || {};
-
+function renderKanban(container, tasks) {
   container.innerHTML = `
     <div class="kanban-board">
       ${STATUSES.map(status => `
@@ -57,61 +110,110 @@ function renderKanban(container, instance, app) {
       `).join('')}
     </div>
   `;
-
-  bindDragDrop(container, instance, app);
 }
 
 function renderKanbanCard(task) {
+  const overdue = isOverdue(task);
+  const dueToday = isDueToday(task);
   return `
     <div class="kanban-card" draggable="true" data-task-id="${task.id}">
       <button class="btn-icon btn-danger kanban-card-delete" data-action="delete-task" data-task-id="${task.id}" title="Eliminar">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
-      <div class="kanban-card-text">${escapeHtml(task.text)}</div>
+      <div class="kanban-card-meta">
+        ${task.priority !== 'none' ? `<span class="priority-dot priority-${task.priority}"></span>` : ''}
+        ${task.dueDate ? `<span class="task-due ${overdue ? 'task-overdue' : ''} ${dueToday ? 'task-due-today' : ''}">${formatDate(task.dueDate)}</span>` : ''}
+      </div>
+      <div class="kanban-card-text ${task.status === 'done' ? 'done-text' : ''}" data-action="edit-task-text" data-task-id="${task.id}">${escapeHtml(task.text)}</div>
+      <div class="kanban-card-actions">
+        <select data-action="change-priority" data-task-id="${task.id}" class="kanban-priority-select" title="Prioridad">
+          ${PRIORITIES.map(p => `<option value="${p}" ${task.priority === p ? 'selected' : ''}>${PRIORITY_LABELS[p]}</option>`).join('')}
+        </select>
+        <input type="date" data-action="change-due" data-task-id="${task.id}" class="kanban-due-input" value="${task.dueDate || ''}" title="Fecha límite" />
+      </div>
     </div>
   `;
 }
 
 // ── Table ───────────────────────────────────────────────
-function renderTable(container, instance) {
-  const { tasks = [] } = instance.data || {};
-
+function renderTable(container, tasks) {
   container.innerHTML = `
     <div class="todo-table-wrapper">
       <table class="todo-table">
         <thead>
           <tr>
-            <th style="width:50%">Tarea</th>
-            <th style="width:25%">Estado</th>
-            <th style="width:25%">Acción</th>
+            <th class="todo-col-drag"></th>
+            <th style="width:32%">Tarea</th>
+            <th class="todo-col-priority">Prioridad</th>
+            <th class="todo-col-due">Fecha</th>
+            <th class="todo-col-status">Estado</th>
+            <th class="todo-col-action"></th>
           </tr>
         </thead>
         <tbody>
-          ${tasks.map(t => `
-            <tr data-task-id="${t.id}">
-              <td><span class="task-text ${t.status === 'done' ? 'done-text' : ''}">${escapeHtml(t.text)}</span></td>
-              <td>
-                <select data-action="change-status" data-task-id="${t.id}">
-                  ${STATUSES.map(s => `<option value="${s}" ${t.status === s ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`).join('')}
-                </select>
-              </td>
-              <td>
-                <button class="btn-icon btn-danger btn-sm" data-action="delete-task" data-task-id="${t.id}" title="Eliminar">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </td>
-            </tr>
-          `).join('')}
+          ${tasks.map(t => renderTableRow(t)).join('')}
         </tbody>
       </table>
     </div>
   `;
 }
 
+function renderTableRow(task) {
+  const overdue = isOverdue(task);
+  const dueToday = isDueToday(task);
+  return `
+    <tr data-task-id="${task.id}" draggable="true" class="todo-table-row">
+      <td class="todo-col-drag">
+        <span class="todo-drag-handle" title="Arrastrar para reordenar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
+        </span>
+      </td>
+      <td>
+        <span class="task-text ${task.status === 'done' ? 'done-text' : ''}" data-action="edit-task-text" data-task-id="${task.id}">${escapeHtml(task.text)}</span>
+      </td>
+      <td class="todo-col-priority">
+        <select data-action="change-priority" data-task-id="${task.id}" class="todo-priority-select">
+          ${PRIORITIES.map(p => `<option value="${p}" ${task.priority === p ? 'selected' : ''}>${PRIORITY_LABELS[p]}</option>`).join('')}
+        </select>
+      </td>
+      <td class="todo-col-due">
+        <input type="date" data-action="change-due" data-task-id="${task.id}" class="todo-due-input" value="${task.dueDate || ''}" />
+        ${task.dueDate ? `<span class="task-due-label ${overdue ? 'task-overdue' : ''} ${dueToday ? 'task-due-today' : ''}">${overdue ? 'Vencida' : dueToday ? 'Hoy' : formatDate(task.dueDate)}</span>` : ''}
+      </td>
+      <td class="todo-col-status">
+        <select data-action="change-status" data-task-id="${task.id}">
+          ${STATUSES.map(s => `<option value="${s}" ${task.status === s ? 'selected' : ''}>${STATUS_LABELS[s]}</option>`).join('')}
+        </select>
+      </td>
+      <td class="todo-col-action">
+        <button class="btn-icon btn-danger btn-sm" data-action="delete-task" data-task-id="${task.id}" title="Eliminar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </td>
+    </tr>
+  `;
+}
+
 // ── Events ──────────────────────────────────────────────
-function bindTodoEvents(container, viewContent, instance, app) {
+function bindTodoEvents(container, viewContent, tasks, instance, app) {
   function refreshView() {
     setTimeout(() => app.renderCurrentInstance(), 50);
+  }
+
+  async function updateTasks(newTasks) {
+    try {
+      await updateInstance(instance.id, { 'data.tasks': newTasks });
+    } catch (err) {
+      console.error('Failed to update tasks:', err);
+    }
+  }
+
+  function mutateTask(taskId, updater) {
+    const newTasks = instance.data.tasks.map(t =>
+      t.id === taskId ? updater(normalizeTask(t)) : normalizeTask(t)
+    );
+    instance.data.tasks = newTasks;
+    return newTasks;
   }
 
   // View toggle
@@ -130,19 +232,54 @@ function bindTodoEvents(container, viewContent, instance, app) {
     const text = input.value.trim();
     if (!text) return;
 
-    const tasks = [...(instance.data.tasks || []), {
+    const newTasks = [...tasks.map(normalizeTask), {
       id: 't_' + Date.now(),
       text,
-      status: 'todo'
+      status: 'todo',
+      priority: 'none',
+      dueDate: null
     }];
 
     try {
-      await updateInstance(instance.id, { 'data.tasks': tasks });
+      await updateInstance(instance.id, { 'data.tasks': newTasks });
       input.value = '';
       refreshView();
     } catch (err) {
       console.error('Failed to add task:', err);
     }
+  });
+
+  // Inline edit: double-click on task text
+  container.querySelectorAll('[data-action="edit-task-text"]').forEach(el => {
+    el.addEventListener('dblclick', () => {
+      const taskId = el.dataset.taskId;
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'task-edit-input';
+      input.value = task.text;
+
+      el.replaceWith(input);
+      input.focus();
+      input.select();
+
+      const save = async () => {
+        const newText = input.value.trim();
+        if (newText && newText !== task.text) {
+          const newTasks = mutateTask(taskId, t => ({ ...t, text: newText }));
+          await updateTasks(newTasks);
+        }
+        refreshView();
+      };
+
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { input.value = task.text; input.blur(); }
+      });
+    });
   });
 
   // Delete task → toast undo
@@ -151,7 +288,6 @@ function bindTodoEvents(container, viewContent, instance, app) {
       e.stopPropagation();
       const taskId = btn.dataset.taskId;
 
-      // Find the DOM element to hide
       const row = btn.closest('tr[data-task-id]');
       const card = btn.closest('.kanban-card');
       const el = row || card;
@@ -160,17 +296,15 @@ function bindTodoEvents(container, viewContent, instance, app) {
       let deleteScheduled = true;
 
       showToast('Tarea eliminada', () => {
-        // UNDO: restore in DOM & cancel deletion
         if (el) el.style.display = '';
         deleteScheduled = false;
       });
 
-      // Schedule actual delete
       setTimeout(async () => {
         if (!deleteScheduled) return;
-        const tasks = (instance.data.tasks || []).filter(t => t.id !== taskId);
+        const newTasks = (instance.data.tasks || []).filter(t => t.id !== taskId);
         try {
-          await updateInstance(instance.id, { 'data.tasks': tasks });
+          await updateInstance(instance.id, { 'data.tasks': newTasks });
         } catch (err) {
           console.error('Failed to delete task:', err);
         }
@@ -182,28 +316,52 @@ function bindTodoEvents(container, viewContent, instance, app) {
   container.querySelectorAll('[data-action="change-status"]').forEach(select => {
     select.addEventListener('change', async () => {
       const taskId = select.dataset.taskId;
-      const newStatus = select.value;
-      const tasks = instance.data.tasks.map(t =>
-        t.id === taskId ? { ...t, status: newStatus } : t
-      );
-      try {
-        await updateInstance(instance.id, { 'data.tasks': tasks });
-        refreshView();
-      } catch (err) {
-        console.error('Failed to update task:', err);
-      }
+      const newTasks = mutateTask(taskId, t => ({ ...t, status: select.value }));
+      await updateTasks(newTasks);
+      refreshView();
     });
   });
+
+  // Change priority
+  container.querySelectorAll('[data-action="change-priority"]').forEach(select => {
+    select.addEventListener('change', async () => {
+      const taskId = select.dataset.taskId;
+      const newTasks = mutateTask(taskId, t => ({ ...t, priority: select.value }));
+      await updateTasks(newTasks);
+      refreshView();
+    });
+  });
+
+  // Change due date
+  container.querySelectorAll('[data-action="change-due"]').forEach(input => {
+    input.addEventListener('change', async () => {
+      const taskId = input.dataset.taskId;
+      const newTasks = mutateTask(taskId, t => ({ ...t, dueDate: input.value || null }));
+      await updateTasks(newTasks);
+      refreshView();
+    });
+  });
+
+  // ── Kanban drag & drop (change status) ──────────
+  if (container.querySelector('.kanban-board')) {
+    bindKanbanDragDrop(container, tasks, instance, app);
+  }
+
+  // ── Table drag & drop (reorder) ────────────────
+  if (container.querySelector('.todo-table')) {
+    bindTableReorder(container, tasks, instance, app);
+  }
 }
 
-// ── Drag & Drop ─────────────────────────────────────────
-function bindDragDrop(container, instance, app) {
+// ── Kanban Drag & Drop ──────────────────────────────────
+function bindKanbanDragDrop(container, tasks, instance, app) {
   let draggedTaskId = null;
 
   container.querySelectorAll('.kanban-card').forEach(card => {
-    card.addEventListener('dragstart', () => {
+    card.addEventListener('dragstart', (e) => {
       draggedTaskId = card.dataset.taskId;
       card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
     });
 
     card.addEventListener('dragend', () => {
@@ -216,6 +374,7 @@ function bindDragDrop(container, instance, app) {
   container.querySelectorAll('.kanban-cards').forEach(dropZone => {
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
       dropZone.closest('.kanban-column').classList.add('drag-over');
     });
 
@@ -232,15 +391,70 @@ function bindDragDrop(container, instance, app) {
       if (!draggedTaskId) return;
 
       const newStatus = dropZone.dataset.status;
-      const tasks = instance.data.tasks.map(t =>
-        t.id === draggedTaskId ? { ...t, status: newStatus } : t
+      const newTasks = instance.data.tasks.map(t =>
+        t.id === draggedTaskId ? { ...normalizeTask(t), status: newStatus } : normalizeTask(t)
       );
 
       try {
-        await updateInstance(instance.id, { 'data.tasks': tasks });
+        await updateInstance(instance.id, { 'data.tasks': newTasks });
         setTimeout(() => app.renderCurrentInstance(), 50);
       } catch (err) {
         console.error('Failed to move task:', err);
+      }
+    });
+  });
+}
+
+// ── Table Reorder Drag & Drop ───────────────────────────
+function bindTableReorder(container, tasks, instance, app) {
+  const rows = container.querySelectorAll('.todo-table tbody tr');
+  let draggedId = null;
+
+  rows.forEach(row => {
+    row.addEventListener('dragstart', (e) => {
+      draggedId = row.dataset.taskId;
+      row.classList.add('dragging-row');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging-row');
+      draggedId = null;
+      rows.forEach(r => r.classList.remove('drag-over-row'));
+    });
+
+    row.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (row.dataset.taskId !== draggedId) {
+        row.classList.add('drag-over-row');
+      }
+    });
+
+    row.addEventListener('dragleave', (e) => {
+      if (!row.contains(e.relatedTarget)) {
+        row.classList.remove('drag-over-row');
+      }
+    });
+
+    row.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      row.classList.remove('drag-over-row');
+      if (!draggedId || draggedId === row.dataset.taskId) return;
+
+      const currentTasks = instance.data.tasks.map(normalizeTask);
+      const draggedIndex = currentTasks.findIndex(t => t.id === draggedId);
+      const targetIndex = currentTasks.findIndex(t => t.id === row.dataset.taskId);
+      if (draggedIndex === -1 || targetIndex === -1) return;
+
+      // Remove from old position, insert at new position
+      const [draggedTask] = currentTasks.splice(draggedIndex, 1);
+      currentTasks.splice(targetIndex, 0, draggedTask);
+
+      try {
+        await updateInstance(instance.id, { 'data.tasks': currentTasks });
+        setTimeout(() => app.renderCurrentInstance(), 50);
+      } catch (err) {
+        console.error('Failed to reorder tasks:', err);
       }
     });
   });
