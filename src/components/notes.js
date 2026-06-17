@@ -101,12 +101,13 @@ function bindNotesEvents(container, instance, app) {
     btn.addEventListener('mousedown', (e) => {
       e.preventDefault(); // prevent editor blur
       const cmd = btn.dataset.cmd;
+      const editor = btn.closest('.notes-card').querySelector('.notes-card-editor');
 
       if (cmd === 'h1' || cmd === 'h2') {
         const tag = cmd.toUpperCase();
-        // Toggle: if already this heading, revert to paragraph
-        const current = document.queryCommandValue('formatBlock');
-        if (current.toLowerCase() === tag) {
+        const raw = document.queryCommandValue('formatBlock');
+        const current = raw.replace(/[<>]/g, '').toLowerCase();
+        if (current === tag.toLowerCase()) {
           document.execCommand('formatBlock', false, 'P');
         } else {
           document.execCommand('formatBlock', false, tag);
@@ -117,8 +118,7 @@ function bindNotesEvents(container, instance, app) {
         document.execCommand(cmd, false, null);
       }
 
-      const card = btn.closest('.notes-card');
-      card.querySelector('.notes-card-editor').focus();
+      editor.focus();
       scheduleSave();
     });
   });
