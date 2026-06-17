@@ -148,8 +148,8 @@ function bindNotesEvents(container, instance, app) {
   }
 
   // Add card
-  container.querySelector('[data-action="add-card"]')?.addEventListener('click', () => {
-    const cards = getCardsFromDOM(container);
+  container.querySelector('[data-action="add-card"]')?.addEventListener('click', async () => {
+    const cards = [...(instance.data.cards || [])];
     if (cards.length >= 3) return;
     const newCard = {
       id: 'c_' + Date.now(),
@@ -157,8 +157,13 @@ function bindNotesEvents(container, instance, app) {
       content: ''
     };
     cards.push(newCard);
-    saveNotes(container, { ...instance, data: { ...instance.data, cards } });
-    app.renderCurrentInstance();
+    try {
+      await updateInstance(instance.id, { 'data.cards': cards });
+      instance.data.cards = cards;
+      app.renderCurrentInstance();
+    } catch (err) {
+      console.error('Failed to add card:', err);
+    }
   });
 
   // Delete card → toast undo
