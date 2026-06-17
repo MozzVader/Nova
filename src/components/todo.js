@@ -126,7 +126,7 @@ function renderKanbanCard(task) {
       </div>
       <div class="kanban-card-text ${task.status === 'done' ? 'done-text' : ''}" data-action="edit-task-text" data-task-id="${task.id}">${escapeHtml(task.text)}</div>
       <div class="kanban-card-actions">
-        <select data-action="change-priority" data-task-id="${task.id}" class="kanban-priority-select" title="Prioridad">
+        <select data-action="change-priority" data-task-id="${task.id}" data-priority="${task.priority}" class="kanban-priority-select" title="Prioridad">
           ${PRIORITIES.map(p => `<option value="${p}" ${task.priority === p ? 'selected' : ''}>${PRIORITY_LABELS[p]}</option>`).join('')}
         </select>
         <input type="date" data-action="change-due" data-task-id="${task.id}" class="kanban-due-input" value="${task.dueDate || ''}" title="Fecha límite" />
@@ -172,7 +172,7 @@ function renderTableRow(task) {
         <span class="task-text ${task.status === 'done' ? 'done-text' : ''}" data-action="edit-task-text" data-task-id="${task.id}">${escapeHtml(task.text)}</span>
       </td>
       <td class="todo-col-priority">
-        <select data-action="change-priority" data-task-id="${task.id}" class="todo-priority-select">
+        <select data-action="change-priority" data-task-id="${task.id}" data-priority="${task.priority}" class="todo-priority-select">
           ${PRIORITIES.map(p => `<option value="${p}" ${task.priority === p ? 'selected' : ''}>${PRIORITY_LABELS[p]}</option>`).join('')}
         </select>
       </td>
@@ -326,6 +326,7 @@ function bindTodoEvents(container, viewContent, tasks, instance, app) {
   container.querySelectorAll('[data-action="change-priority"]').forEach(select => {
     select.addEventListener('change', async () => {
       const taskId = select.dataset.taskId;
+      select.dataset.priority = select.value;
       const newTasks = mutateTask(taskId, t => ({ ...t, priority: select.value }));
       await updateTasks(newTasks);
       refreshView();
