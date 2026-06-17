@@ -17,9 +17,9 @@
 
 | Sección | Descripción |
 |---------|-------------|
-| 📝 **Notas** | Editor de texto rico con soporte para negrita, cursiva y listas. Layout masonry con tarjetas auto-savable. |
+| 📝 **Notas** | Editor de texto rico con H1, H2, negrita, cursiva, subrayado, listas (ordenadas/no ordenadas), checkbox y alineación. Layout masonry con tarjetas auto-savable. |
 | 🖼️ **Imágenes** | Galería con grid masonry, modal de vista previa en tamaño original y edición de títulos. |
-| ✅ **To-do** | Gestión de tareas con vista de tabla (default) y kanban con drag & drop nativo. |
+| ✅ **To-do** | Gestión de tareas con vista de tabla y kanban con drag & drop. Edición inline, prioridades con color, fechas límite con indicador de vencimiento, reordenado por arrastre y barra de progreso. |
 
 Cada sección soporta **múltiples instancias** independientes — como historiales de herramientas de chat IA — para mantener todo separado y organizado.
 
@@ -85,8 +85,13 @@ service cloud.firestore {
 - 📱 **Responsive** — funciona en desktop y mobile
 - ✏️ **Renombrado en línea** — editá nombres directamente en el sidebar
 - 🔄 **Undo toast** — deshacé eliminaciones con un click (15s de ventana)
-- 🖱️ **Drag & drop** — mové tareas entre columnas en el kanban
+- 🖱️ **Drag & drop** — mové tareas entre columnas en el kanban y reordená filas en la tabla
 - 🔗 **Hash routing** — URLs compartibles con estado de navegación
+- 📊 **Barra de progreso** — seguimiento visual de tareas completadas
+- 🎯 **Prioridades con color** — alta (rojo), media (amarillo), baja (verde)
+- 📅 **Fechas límite** — date picker con indicador visual de tareas vencidas
+- 🟢 **Indicador de sync** — feedback visual en tiempo real sobre la conexión a Firestore
+- 🔗 **FAB flotante** — acceso rápido al repositorio y portfolio
 
 ## 📁 Estructura
 
