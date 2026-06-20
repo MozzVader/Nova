@@ -112,7 +112,7 @@ function bindImagesEvents(container, instance, app) {
         } catch (err) {
           console.error('Failed to delete image:', err);
         }
-      }, 15000);
+      }, 10000);
     });
   });
 

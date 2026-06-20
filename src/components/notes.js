@@ -147,16 +147,30 @@ function bindNotesEvents(container, instance, app) {
     }
   }
 
+  // Flush any pending save and return current cards from DOM
+  async function flushAndGetCards() {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+    const visibleCards = getCardsFromDOM(container);
+    const hiddenCards = (instance.data.cards || []).filter(
+      ic => !visibleCards.find(c => c.id === ic.id)
+    );
+    const allCards = [...visibleCards, ...hiddenCards];
+    await updateInstance(instance.id, { 'data.cards': allCards });
+    instance.data.cards = allCards;
+    return allCards;
+  }
+
   // Add card
   container.querySelector('[data-action="add-card"]')?.addEventListener('click', async () => {
-    const cards = [...(instance.data.cards || [])];
-    if (cards.length >= 3) return;
+    const currentCards = await flushAndGetCards();
+    if (currentCards.length >= 3) return;
     const newCard = {
       id: 'c_' + Date.now(),
       title: '',
       content: ''
     };
-    cards.push(newCard);
+    const cards = [...currentCards, newCard];
     try {
       await updateInstance(instance.id, { 'data.cards': cards });
       instance.data.cards = cards;
@@ -198,7 +212,7 @@ function bindNotesEvents(container, instance, app) {
           // Card is still gone, confirm deletion
           saveNotes(container, { ...instance, data: { ...instance.data, cards } });
         }
-      }, 15000);
+      }, 10000);
     });
   });
 }

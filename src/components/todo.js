@@ -308,7 +308,7 @@ function bindTodoEvents(container, viewContent, tasks, instance, app) {
         } catch (err) {
           console.error('Failed to delete task:', err);
         }
-      }, 15000);
+      }, 10000);
     });
   });
 

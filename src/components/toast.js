@@ -1,12 +1,12 @@
 // ── Toast with Undo ──────────────────────────────────────
-// Shows a toast at bottom-center with a 15s countdown bar.
+// Shows a toast at bottom-center with a 10s countdown bar.
 // If user clicks "Deshacer", calls onUndo and cancels deletion.
 // If timer expires, calls onConfirm to actually delete.
 
 let toastTimer = null;
 let toastAnimFrame = null;
 
-export function showToast(message, onUndo, duration = 15000) {
+export function showToast(message, onUndo, duration = 10000) {
   // Remove existing toast if any
   clearToast();
 
