@@ -94,6 +94,41 @@ function bindNotesEvents(container, instance, app) {
       const text = e.clipboardData.getData('text/plain');
       document.execCommand('insertText', false, text);
     });
+    // Allow deleting checkboxes with Backspace/Delete
+    editor.addEventListener('keydown', (e) => {
+      if (e.key !== 'Backspace' && e.key !== 'Delete') return;
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      // If selection is collapsed, check adjacent non-editable element
+      if (range.collapsed) {
+        const node = range.startContainer;
+        const offset = range.startOffset;
+        let target = null;
+        if (e.key === 'Backspace') {
+          // Check the node before cursor
+          if (offset === 0 && node.previousSibling) {
+            target = node.previousSibling;
+          } else if (offset > 0 && node.childNodes[offset - 1]) {
+            target = node.childNodes[offset - 1];
+          } else if (node.nodeType === 3 && offset === 0 && node.parentNode.previousSibling) {
+            target = node.parentNode.previousSibling;
+          }
+        } else {
+          // Delete: check the node after cursor
+          if (node.nodeType === 3 && offset === node.length && node.parentNode.nextSibling) {
+            target = node.parentNode.nextSibling;
+          } else if (node.childNodes[offset]) {
+            target = node.childNodes[offset];
+          }
+        }
+        if (target && (target.classList?.contains('notes-checkbox-label') || target.classList?.contains('notes-checkbox'))) {
+          e.preventDefault();
+          target.remove();
+          scheduleSave();
+        }
+      }
+    });
   });
 
   // Toolbar commands
