@@ -23,6 +23,10 @@ export function renderNotes(container, instance, app) {
 }
 
 function renderCard(card) {
+  // Migrate old DOM checkboxes to unicode
+  let content = card.content || '';
+  content = content.replace(/<label[^>]*class="notes-checkbox-label"[^>]*>.*?<input[^>]*class="notes-checkbox"[^>]*>.*?<\/label>\s*/gi, '\u2610 ');
+
   return `
     <div class="notes-card" data-card-id="${card.id}">
       <div class="notes-card-header">
@@ -31,7 +35,7 @@ function renderCard(card) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <div class="notes-card-editor" contenteditable="true" data-field="content" data-placeholder="Escribí algo...">${card.content || ''}</div>
+      <div class="notes-card-editor" contenteditable="true" data-field="content" data-placeholder="Escribí algo...">${content}</div>
       <div class="notes-toolbar">
         <div class="notes-toolbar-group">
           <button data-cmd="bold" title="Negrita"><b>B</b></button>
@@ -203,32 +207,23 @@ function bindNotesEvents(container, instance, app) {
     btn.addEventListener('click', () => {
       const cardId = btn.dataset.cardId;
       const cardEl = btn.closest('.notes-card');
+      if (cardEl) cardEl.style.display = 'none';
 
-      // Optimistic: hide card from DOM
-      cardEl.style.display = 'none';
-
-      // Save current state without this card
-      const cards = getCardsFromDOM(container).filter(c => c.id !== cardId);
+      let deleteScheduled = true;
 
       showToast('Nota eliminada', () => {
-        // UNDO: show card again, save with it
-        cardEl.style.display = '';
-        const allCards = getCardsFromDOM(container);
-        // Card was filtered out, re-add it
-        const removedCard = instance.data.cards.find(c => c.id === cardId);
-        if (removedCard) {
-          allCards.push(removedCard);
-          saveNotes(container, { ...instance, data: { ...instance.data, cards: allCards } });
-        }
+        if (cardEl) cardEl.style.display = '';
+        deleteScheduled = false;
       });
 
-      // Schedule actual delete after 15s
-      setTimeout(() => {
-        // Re-read DOM (may have been restored by undo)
-        const currentCards = getCardsFromDOM(container);
-        if (!currentCards.find(c => c.id === cardId)) {
-          // Card is still gone, confirm deletion
-          saveNotes(container, { ...instance, data: { ...instance.data, cards } });
+      setTimeout(async () => {
+        if (!deleteScheduled) return;
+        const newCards = (instance.data.cards || []).filter(c => c.id !== cardId);
+        instance.data.cards = newCards;
+        try {
+          await updateInstance(instance.id, { 'data.cards': newCards });
+        } catch (err) {
+          console.error('Failed to delete card:', err);
         }
       }, 10000);
     });
@@ -248,10 +243,10 @@ function getCardsFromDOM(container) {
   return cards;
 }
 
-async function saveNotes(container, instance) {
-  // Get all cards including hidden ones by temporarily showing them
+async function saveNotes(container, inst) {
   const allCards = [];
   container.querySelectorAll('.notes-card').forEach(cardEl => {
+    if (cardEl.style.display === 'none') return;
     allCards.push({
       id: cardEl.dataset.cardId,
       title: cardEl.querySelector('.notes-card-title').value,
@@ -259,7 +254,8 @@ async function saveNotes(container, instance) {
     });
   });
   try {
-    await updateInstance(instance.id, { 'data.cards': allCards });
+    await updateInstance(inst.id, { 'data.cards': allCards });
+    inst.data.cards = allCards;
   } catch (err) {
     console.error('Failed to save notes:', err);
   }
