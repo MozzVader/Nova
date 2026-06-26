@@ -209,11 +209,43 @@ function bindNotesEvents(container, instance, app) {
       const cardEl = btn.closest('.notes-card');
       if (cardEl) cardEl.style.display = 'none';
 
+      // Show add button if there's room now
+      const visibleCount = container.querySelectorAll('.notes-card:not([style*="display: none"])').length;
+      const addBtn = container.querySelector('.btn-add-card');
+      if (visibleCount < 3 && !addBtn) {
+        const cardsContainer = container.querySelector('.notes-cards');
+        const addDiv = document.createElement('div');
+        addDiv.className = 'btn-add-card';
+        addDiv.dataset.action = 'add-card';
+        addDiv.title = 'Agregar nota rápida';
+        addDiv.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+        cardsContainer.appendChild(addDiv);
+        // Re-bind the add-card click
+        addDiv.addEventListener('click', async () => {
+          const currentCards = await flushAndGetCards();
+          if (currentCards.length >= 3) return;
+          const newCard = { id: 'c_' + Date.now(), title: '', content: '' };
+          const cards = [...currentCards, newCard];
+          try {
+            await updateInstance(instance.id, { 'data.cards': cards });
+            instance.data.cards = cards;
+            app.renderCurrentInstance();
+          } catch (err) {
+            console.error('Failed to add card:', err);
+          }
+        });
+      }
+
       let deleteScheduled = true;
 
       showToast('Nota eliminada', () => {
         if (cardEl) cardEl.style.display = '';
         deleteScheduled = false;
+        // Hide add button if back to 3 visible
+        const vis = container.querySelectorAll('.notes-card:not([style*="display: none"])').length;
+        if (vis >= 3) {
+          container.querySelector('.btn-add-card')?.remove();
+        }
       });
 
       setTimeout(async () => {
