@@ -94,41 +94,7 @@ function bindNotesEvents(container, instance, app) {
       const text = e.clipboardData.getData('text/plain');
       document.execCommand('insertText', false, text);
     });
-    // Allow deleting checkboxes with Backspace/Delete
-    editor.addEventListener('keydown', (e) => {
-      if (e.key !== 'Backspace' && e.key !== 'Delete') return;
-      const sel = window.getSelection();
-      if (!sel.rangeCount) return;
-      const range = sel.getRangeAt(0);
-      // If selection is collapsed, check adjacent non-editable element
-      if (range.collapsed) {
-        const node = range.startContainer;
-        const offset = range.startOffset;
-        let target = null;
-        if (e.key === 'Backspace') {
-          // Check the node before cursor
-          if (offset === 0 && node.previousSibling) {
-            target = node.previousSibling;
-          } else if (offset > 0 && node.childNodes[offset - 1]) {
-            target = node.childNodes[offset - 1];
-          } else if (node.nodeType === 3 && offset === 0 && node.parentNode.previousSibling) {
-            target = node.parentNode.previousSibling;
-          }
-        } else {
-          // Delete: check the node after cursor
-          if (node.nodeType === 3 && offset === node.length && node.parentNode.nextSibling) {
-            target = node.parentNode.nextSibling;
-          } else if (node.childNodes[offset]) {
-            target = node.childNodes[offset];
-          }
-        }
-        if (target && (target.classList?.contains('notes-checkbox-label') || target.classList?.contains('notes-checkbox'))) {
-          e.preventDefault();
-          target.remove();
-          scheduleSave();
-        }
-      }
-    });
+
   });
 
   // Toolbar commands
@@ -161,26 +127,43 @@ function bindNotesEvents(container, instance, app) {
   function insertCheckbox() {
     const editor = document.activeElement;
     if (!editor || !editor.classList.contains('notes-card-editor')) return;
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.contentEditable = 'false';
-    checkbox.className = 'notes-checkbox';
-    const text = document.createTextNode('\u00a0');
-    const wrapper = document.createElement('label');
-    wrapper.className = 'notes-checkbox-label';
-    wrapper.contentEditable = 'false';
-    wrapper.appendChild(checkbox);
-    wrapper.appendChild(text);
-    const selection = window.getSelection();
-    if (selection.rangeCount) {
-      const range = selection.getRangeAt(0);
-      range.insertNode(wrapper);
-      range.setStartAfter(text);
-      range.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
+    document.execCommand('insertText', false, '\u2610 ');
+    scheduleSave();
   }
+
+  // Toggle ☐/☑ on click
+  container.querySelectorAll('.notes-card-editor').forEach(editor => {
+    editor.addEventListener('click', (e) => {
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      // Check if cursor is on or right after a checkbox char
+      const node = range.startContainer;
+      if (node.nodeType === 3) {
+        const offset = range.startOffset;
+        const text = node.textContent;
+        if (text[offset] === '\u2610' || text[offset - 1] === '\u2610') {
+          const pos = text[offset] === '\u2610' ? offset : offset - 1;
+          node.textContent = text.substring(0, pos) + '\u2611' + text.substring(pos + 1);
+          range.setStart(node, pos + 1);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          scheduleSave();
+          e.preventDefault();
+        } else if (text[offset] === '\u2611' || text[offset - 1] === '\u2611') {
+          const pos = text[offset] === '\u2611' ? offset : offset - 1;
+          node.textContent = text.substring(0, pos) + '\u2610' + text.substring(pos + 1);
+          range.setStart(node, pos + 1);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          scheduleSave();
+          e.preventDefault();
+        }
+      }
+    });
+  });
 
   // Flush any pending save and return current cards from DOM
   async function flushAndGetCards() {

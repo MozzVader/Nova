@@ -749,22 +749,6 @@ body.light .icon-sun { display: none; }
 }
 .notes-card-editor u { text-decoration-color: var(--accent); }
 
-/* Checkbox in editor */
-.notes-checkbox-label {
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-  margin-right: 4px;
-  vertical-align: middle;
-}
-.notes-checkbox {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--accent);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
 /* Notes toolbar */
 .notes-toolbar {
   display: flex;
