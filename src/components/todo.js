@@ -232,7 +232,9 @@ function bindTodoEvents(container, viewContent, tasks, instance, app) {
     const text = input.value.trim();
     if (!text) return;
 
-    const newTasks = [...tasks.map(normalizeTask), {
+    // Read visible tasks from DOM to exclude pending deletions
+    const visibleTasks = getVisibleTasksFromDOM(container);
+    const newTasks = [...visibleTasks, {
       id: 't_' + Date.now(),
       text,
       status: 'todo',
@@ -242,6 +244,7 @@ function bindTodoEvents(container, viewContent, tasks, instance, app) {
 
     try {
       await updateInstance(instance.id, { 'data.tasks': newTasks });
+      instance.data.tasks = newTasks;
       input.value = '';
       refreshView();
     } catch (err) {
@@ -459,6 +462,42 @@ function bindTableReorder(container, tasks, instance, app) {
       }
     });
   });
+}
+
+function getVisibleTasksFromDOM(container) {
+  const result = [];
+  // Table rows
+  container.querySelectorAll('.todo-table-row:not([style*="display: none"])').forEach(row => {
+    const id = row.dataset.taskId;
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const t = normalizeTask(task);
+    // Read current values from DOM selects/inputs
+    const statusSel = row.querySelector('[data-action="change-status"]');
+    const prioSel = row.querySelector('[data-action="change-priority"]');
+    const dueInput = row.querySelector('[data-action="change-due"]');
+    const textEl = row.querySelector('[data-action="edit-task-text"]');
+    if (statusSel) t.status = statusSel.value;
+    if (prioSel) t.priority = prioSel.value;
+    if (dueInput) t.dueDate = dueInput.value || null;
+    if (textEl) t.text = textEl.textContent.trim();
+    result.push(t);
+  });
+  // Kanban cards
+  container.querySelectorAll('.kanban-card:not([style*="display: none"])').forEach(card => {
+    const id = card.dataset.taskId;
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const t = normalizeTask(task);
+    const prioSel = card.querySelector('[data-action="change-priority"]');
+    const dueInput = card.querySelector('[data-action="change-due"]');
+    const textEl = card.querySelector('.kanban-card-text');
+    if (prioSel) t.priority = prioSel.value;
+    if (dueInput) t.dueDate = dueInput.value || null;
+    if (textEl) t.text = textEl.textContent.trim();
+    result.push(t);
+  });
+  return result;
 }
 
 function escapeHtml(str) {
